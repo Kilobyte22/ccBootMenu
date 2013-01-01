@@ -467,8 +467,8 @@ local sSelectedBios
 local nLastUsed
 local tBios
 
-local function runBios( _tEnv, _sBios )
-    local fnFile, err = loadstring( _sBios )
+local function runBios( _tEnv, _sBios, _sName )
+    local fnFile, err = loadstring( _sBios, _sName )
     if fnFile then
         local tEnv = _tEnv
 		setmetatable( tEnv, { __index = _G } )
@@ -701,7 +701,7 @@ function os.boot( _sUID, _bSaveToConfig )
 		end
 		DeactivateAll()
 		tBiosList[nBiosID].isBeingUsed = true
-		local ok, err = pcall(function() runBios({},tBiosList[nBiosID].bios) end)
+		local ok, err = pcall(function() runBios({}, tBiosList[nBiosID].bios, tBiosList[nBiosID].annotations.name) end)
 		if not ok then
 			pcall(function() printError(err) end)
 			os.pullEvent("key")
@@ -709,15 +709,14 @@ function os.boot( _sUID, _bSaveToConfig )
 	end
 end
 
-function os.bootMenu()
-	
+function os.bootMenu()	
 	local function scrollRight()
 		if nSelectedBios < #tBiosList then
 			nSelectedBios = nSelectedBios + 1
 		end
 		drawMenu()
 	end
-
+	
 	local function scrollLeft()
 		if nSelectedBios > 1 then
 			nSelectedBios = nSelectedBios - 1
