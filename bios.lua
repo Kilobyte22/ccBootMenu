@@ -688,15 +688,17 @@ local function drawMenu()
 	end
 end
 
-function os.boot( _sUID )
+function os.boot( _sUID, _bSaveToConfig )
 	print(true)
 	nBiosID = UIDToNumber(_sUID)
 	if nBiosID then
 		term.clear()
 		term.setCursorPos(1,1)
-		local fConfig = fs.open("boot/bootConf.cfg","w")
-		fConfig.write("LastUsed = "..tBiosList[nSelectedBios or 1].uid)
-		fConfig.close()
+		if _bSaveToConfig then
+			local fConfig = fs.open("boot/bootConf.cfg","w")
+			fConfig.write("LastUsed = "..tBiosList[nSelectedBios or 1].uid)
+			fConfig.close()
+		end
 		DeactivateAll()
 		tBiosList[nBiosID].isBeingUsed = true
 		local ok, err = pcall(function() runBios({},tBiosList[nBiosID].bios) end)
@@ -732,7 +734,7 @@ function os.bootMenu()
 			elseif p1 == 203 then -- left
 				scrollLeft()
 			elseif p1 == 28 then -- enter
-				os.boot(tBiosList[nSelectedBios].uid)
+				os.boot(tBiosList[nSelectedBios].uid, true)
 			end
 		elseif event == "mouse_click" then
 			if p2 > xSize - 8 and p3 >= 5 and p3 <= ySize -5 then --right
@@ -740,7 +742,7 @@ function os.bootMenu()
 			elseif p2 <= 8 and p3 >= 5 and p3 <= ySize -5 then -- left
 				scrollLeft()
 			elseif p2 <= xSize - 8 and p2 > 8 and p3 >= 5 and p3 <= ySize -5 then
-				os.boot(tBiosList[nSelectedBios].uid)
+				os.boot(tBiosList[nSelectedBios].uid, true)
 				break
 			end
 		elseif event == "mouse_scroll" then
@@ -779,7 +781,7 @@ scanBootDir("rom/boot")
 if not fs.exists("boot") then fs.makeDir("boot") end
 
 if not tBiosList[2] and tBiosList[1] then
-	os.boot(tBiosList[1].uid)
+	os.boot(tBiosList[1].uid, true)
 else
 	local fConfig = fs.open("boot/bootConf.cfg","r")
 	if fConfig then
@@ -795,7 +797,7 @@ else
 		while true do
 			event = os.pullEventRaw()
 			if event == "timer" then
-				os.boot(tBiosList[nLastUsed].uid)
+				os.boot(tBiosList[nLastUsed].uid, true)
 				break
 			elseif event == "terminate" then 
 				os.bootMenu()
