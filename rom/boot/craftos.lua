@@ -1,8 +1,5 @@
-@name("CraftOS")
-@version("1.4")
-@description("This is CraftOS, the default OS for ComputerCraft.")
+@general(name="CraftOS",version="1.4",description="This is CraftOS, the default OS for ComputerCraft.",fullReplace=false)
 @turtle(name="TurtleOS")
-
 			
 -- Load APIs
 local tApis = fs.list( "rom/apis" )

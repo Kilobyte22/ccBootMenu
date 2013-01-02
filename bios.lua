@@ -531,22 +531,29 @@ local function parseBios( _sName, _sDir )
 		}
 	}
 	for str in sBios:gmatch("(@ *%w+%([^%)]+%))") do
-		if str:find('@ *%w+%( *"[^"]+" *%)') then
-			local index, value = str:match('@ *(%w+)%( *"([^"]+)" *%)')
-			value = value:gsub("\\n","\n")
-			value = value:gsub("\\t","\t")
-			tAnnotations.general[index] = value
-		elseif str:find('@ *%w+%( *%w+ *%)') then
-			local index, value = str:match('@ *(%w+)%( *(%w+) *%)')
-			if value == "true" then value = true
-			elseif value == "false" then value = false end
-			if type(value) == "boolean" then
-				tAnnotations.general[index] = value
+		if str:find("@general") then
+			local str2 = str:match("@ *general%(([^%)]+)%)")
+			for str3 in str2:gmatch('(%w+ *= *"[^"]+")[^,]*') do
+				if str:find('(%w+)=("?[^"]+"?),?') then
+					local index, value = str3:match('(%w+) *= *"([^"]+)"')
+					if index and value then
+						value = value:gsub("\\n","\n")
+						value = value:gsub("\\t","\t")
+						tAnnotations.general[index] = value
+					end
+				elseif str:find('(%w+) *= *(%w+)') then
+					local index, value = str3:match('(%w+) *= *(%w+)')
+					if value == "true" then value = true
+					elseif value == "false" then value = false end
+					if type(value) == "boolean" then
+						tAnnotations.general[index] = value
+					end
+				end
 			end
 		elseif str:find("@color") or str:find("@turtle") or str:find("@regular") then
 			local sOverride = str:match("@ *(%w+)")
 			local str2 = str:match("@ *%w+%(([^%)]+)%)")
-			for str3 in str2:gmatch("[^,]+") do
+			for str3 in str2:gmatch('(%w+ *= *"[^"]+")[^,]*') do
 				if str:find('(%w+) *= *"([^"]+)"') then
 					local index, value = str3:match('(%w+) *= *"([^"]+)"')
 					value = value:gsub("\\n","\n")
@@ -557,7 +564,7 @@ local function parseBios( _sName, _sDir )
 					if value == "true" then value = true
 					elseif value == "false" then value = false end
 					if type(value) == "boolean" then
-						tAnnotations.general[index] = value
+						tAnnotations.override[sOverride][index] = value
 					end
 				end
 			end
