@@ -1,3 +1,23 @@
+local function copyTable( _tTable )
+	if type(_tTable) ~= "table" then
+		error( "bad argument #1 to copyTable (table expected, got "..typeT..")", 2 )
+	end
+	local tCopy = {}
+	local i = 1
+	for k, v in pairs(_tTable) do
+		if not (k == "_G") then
+			if type(v) == "table" then
+				v = copyTable(v)
+			end
+			tCopy[k] = v
+		end
+	end
+	return tCopy
+end
+
+local tMinimalGlobalEnv = copyTable(_G)
+local tDefaultGlobalEnv
+
 function pairs( _t )
 	local typeT = type( _t )
 	if typeT ~= "table" then
@@ -169,7 +189,7 @@ function printError( ... )
 		term.setTextColour( 16384 )
 	end
 	print( ... )
-	term.setTextColour( colours.white )
+	term.setTextColour( 1 )
 end
 
 function printWarning( ... )
@@ -177,7 +197,7 @@ function printWarning( ... )
 		term.setTextColour( 2 )
 	end
 	print( ... )
-	term.setTextColour( colours.white )
+	term.setTextColour( 1 )
 end
 
 function read( _sReplaceChar, _tHistory )
@@ -217,29 +237,29 @@ function read( _sReplaceChar, _tHistory )
 			redraw()
 			
 		elseif sEvent == "key" then
-		    if param == keys.enter then
+		    if param == 28 then
 				-- Enter
 				break
 				
-			elseif param == keys.left then
+			elseif param == 203 then
 				-- Left
 				if nPos > 0 then
 					nPos = nPos - 1
 					redraw()
 				end
 				
-			elseif param == keys.right then
+			elseif param == 205 then
 				-- Right				
 				if nPos < string.len(sLine) then
 					nPos = nPos + 1
 					redraw()
 				end
 			
-			elseif param == keys.up or param == keys.down then
+			elseif param == 200 or param == 208 then
                 -- Up or down
 				if _tHistory then
 					redraw(" ");
-					if param == keys.up then
+					if param == 200 then
 						-- Up
 						if nHistoryPos == nil then
 							if #_tHistory > 0 then
@@ -266,7 +286,7 @@ function read( _sReplaceChar, _tHistory )
 					end
 					redraw()
                 end
-			elseif param == keys.backspace then
+			elseif param == 14 then
 				-- Backspace
 				if nPos > 0 then
 					redraw(" ");
@@ -274,17 +294,17 @@ function read( _sReplaceChar, _tHistory )
 					nPos = nPos - 1					
 					redraw()
 				end
-			elseif param == keys.home then
+			elseif param == 199 then
 				-- Home
 				nPos = 0
 				redraw()		
-			elseif param == keys.delete then
+			elseif param == 211 then
 				if nPos < string.len(sLine) then
 					redraw(" ");
 					sLine = string.sub( sLine, 1, nPos ) .. string.sub( sLine, nPos + 2 )				
 					redraw()
 				end
-			elseif param == keys["end"] then
+			elseif param == 207 then
 				-- End
 				nPos = string.len(sLine)
 				redraw()
@@ -325,7 +345,7 @@ function os.run( _tEnv, _sPath, ... )
     local fnFile, err = loadfile( _sPath )
     if fnFile then
         local tEnv = _tEnv
-		setmetatable( tEnv, { __index = _G } )
+		setmetatable( tEnv, { __index = tDefaultGlobalEnv } )
         setfenv( fnFile, tEnv )
         local ok, err = pcall( function()
         	fnFile( unpack( tArgs ) )
@@ -366,7 +386,7 @@ function os.loadAPI( _sPath )
 	tAPIsLoading[sName] = true
 		
 	local tEnv = {}
-	setmetatable( tEnv, { __index = _G } )
+	setmetatable( tEnv, { __index = tDefaultGlobalEnv } )
 	local fnAPI, err = loadfile( _sPath )
 	if fnAPI then
 		setfenv( fnAPI, tEnv )
@@ -382,7 +402,7 @@ function os.loadAPI( _sPath )
 		tAPI[k] =  v
 	end
 	
-	_G[sName] = tAPI	
+	tDefaultGlobalEnv[sName] = tAPI	
 	tAPIsLoading[sName] = nil
 	table.insert(tLoadedAPIs,sName)
 	return true
@@ -397,8 +417,8 @@ local function findValue( _tTable, _value )
 end
 
 function os.unloadAPI( _sName )
-	if _sName ~= "_G" and type(_G[_sName]) == "table" then
-		_G[_sName] = nil
+	if _sName ~= "_G" and type(tDefaultGlobalEnv[_sName]) == "table" then
+		tDefaultGlobalEnv[_sName] = nil
 		table.remove(tLoadedAPIs, findValue(tLoadedAPIs, _sName))
 	end
 end
@@ -467,11 +487,12 @@ local sSelectedBios
 local nLastUsed
 local tBios
 
-local function runBios( _tEnv, _sBios, _sName )
+local function runBios( _tEnv, _sBios, _bFullReplace , _sName )
     local fnFile, err = loadstring( _sBios, _sName )
     if fnFile then
+    	local tGlobalEnv = _bFullReplace and tMinimalGlobalEnv or tDefaultGlobalEnv
         local tEnv = _tEnv
-		setmetatable( tEnv, { __index = _G } )
+		setmetatable( tEnv, { __index = tGlobalEnv } )
         setfenv( fnFile, tEnv )
         local ok, err = pcall( fnFile )
         if not ok then
@@ -515,14 +536,30 @@ local function parseBios( _sName, _sDir )
 			value = value:gsub("\\n","\n")
 			value = value:gsub("\\t","\t")
 			tAnnotations.general[index] = value
+		elseif str:find('@ *%w+%( *%w+ *%)') then
+			local index, value = str:match('@ *(%w+)%( *(%w+) *%)')
+			if value == "true" then value = true
+			elseif value == "false" then value = false end
+			if type(value) == "boolean" then
+				tAnnotations.general[index] = value
+			end
 		elseif str:find("@color") or str:find("@turtle") or str:find("@regular") then
 			local sOverride = str:match("@ *(%w+)")
 			local str2 = str:match("@ *%w+%(([^%)]+)%)")
 			for str3 in str2:gmatch("[^,]+") do
-				local index, value = str3:match('(%w+) *= *"([^"]+)"')
-				value = value:gsub("\\n","\n")
-				value = value:gsub("\\t","\t")
-				tAnnotations.override[sOverride][index] = value
+				if str:find('(%w+) *= *"([^"]+)"') then
+					local index, value = str3:match('(%w+) *= *"([^"]+)"')
+					value = value:gsub("\\n","\n")
+					value = value:gsub("\\t","\t")
+					tAnnotations.override[sOverride][index] = value
+				elseif str:find('(%w+) *= *(%w+)') then
+					local index, value = str3:match('(%w+) *= *(%w+)')
+					if value == "true" then value = true
+					elseif value == "false" then value = false end
+					if type(value) == "boolean" then
+						tAnnotations.general[index] = value
+					end
+				end
 			end
 		end
 	end
@@ -689,7 +726,6 @@ local function drawMenu()
 end
 
 function os.boot( _sUID, _bSaveToConfig )
-	print(true)
 	nBiosID = UIDToNumber(_sUID)
 	if nBiosID then
 		term.clear()
@@ -701,7 +737,7 @@ function os.boot( _sUID, _bSaveToConfig )
 		end
 		DeactivateAll()
 		tBiosList[nBiosID].isBeingUsed = true
-		local ok, err = pcall(function() runBios({}, tBiosList[nBiosID].bios, tBiosList[nBiosID].annotations.name) end)
+		local ok, err = pcall(function() runBios({}, tBiosList[nBiosID].bios, tBiosList[nBiosID].annotations.fullReplace, tBiosList[nBiosID].annotations.name) end)
 		if not ok then
 			pcall(function() printError(err) end)
 			os.pullEvent("key")
@@ -771,6 +807,17 @@ function os.setBootFile( _sUID )
 		fConfig.close()
 	end
 end
+
+tDefaultGlobalEnv = copyTable(_G)
+
+
+-- Copy boot loader integration functions over to the minimal environment
+
+if not tMinimalGlobalEnv.os then tMinimalGlobalEnv.os = {} end
+tMinimalGlobalEnv.os.boot = os.boot
+tMinimalGlobalEnv.os.bootMenu = os.bootMenu
+tMinimalGlobalEnv.os.getBootList = os.getBootList
+tMinimalGlobalEnv.os.setBootFile = os.setBootFile
 
 -- Stuff finally happens here
 
