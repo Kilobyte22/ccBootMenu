@@ -532,16 +532,19 @@ local function parseBios( _sName, _sDir )
 	}
 	for str in sBios:gmatch("(@ *%w+%([^%)]+%))") do
 		if str:find("@general") then
-			local str2 = str:match("@ *general%(([^%)]+)%)")
-			for str3 in str2:gmatch('(%w+ *= *"[^"]+")[^,]*') do
-				if str:find('(%w+)=("?[^"]+"?),?') then
+			local str2 = str:match("@ *general%(([^%)]+)%)")..","
+			for str3 in str2:gmatch('(%w+ *= *"?[^"]+"? *),') do
+				print(str3)
+				if str3:find('%w+ *= *"[^"]+"') then
+					print(str3)
 					local index, value = str3:match('(%w+) *= *"([^"]+)"')
 					if index and value then
 						value = value:gsub("\\n","\n")
 						value = value:gsub("\\t","\t")
 						tAnnotations.general[index] = value
 					end
-				elseif str:find('(%w+) *= *(%w+)') then
+				elseif str3:find('%w+ *= *%w+') then
+					print(str3)
 					local index, value = str3:match('(%w+) *= *(%w+)')
 					if value == "true" then value = true
 					elseif value == "false" then value = false end
@@ -552,8 +555,8 @@ local function parseBios( _sName, _sDir )
 			end
 		elseif str:find("@color") or str:find("@turtle") or str:find("@regular") then
 			local sOverride = str:match("@ *(%w+)")
-			local str2 = str:match("@ *%w+%(([^%)]+)%)")
-			for str3 in str2:gmatch('(%w+ *= *"[^"]+")[^,]*') do
+			local str2 = str:match("@ *%w+%(([^%)]+)%)")..","
+			for str3 in str2:gmatch('(%w+ *= *"?[^"]+"? *),') do
 				if str:find('(%w+) *= *"([^"]+)"') then
 					local index, value = str3:match('(%w+) *= *"([^"]+)"')
 					value = value:gsub("\\n","\n")
@@ -834,7 +837,7 @@ scanBootDir("rom/boot")
 if not fs.exists("boot") then fs.makeDir("boot") end
 
 if not tBiosList[2] and tBiosList[1] then
-	os.boot(tBiosList[1].uid, true)
+	--os.bootMenu(tBiosList[1].uid, true)
 else
 	local fConfig = fs.open("boot/bootConf.cfg","r")
 	if fConfig then
