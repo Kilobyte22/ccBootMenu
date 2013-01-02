@@ -16,6 +16,7 @@ local function copyTable( _tTable )
 end
 
 local tMinimalGlobalEnv = copyTable(_G)
+tMinimalGlobalEnv._G = tMinimalGlobalEnv
 local tDefaultGlobalEnv
 
 function pairs( _t )
@@ -816,6 +817,7 @@ function os.setBootFile( _sUID )
 end
 
 tDefaultGlobalEnv = copyTable(_G)
+tDefaultGlobalEnv._G = tDefaultGlobalEnv
 
 
 -- Copy boot loader integration functions over to the minimal environment
