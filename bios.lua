@@ -534,9 +534,7 @@ local function parseBios( _sName, _sDir )
 		if str:find("@general") then
 			local str2 = str:match("@ *general%(([^%)]+)%)")..","
 			for str3 in str2:gmatch('(%w+ *= *"?[^"]+"? *),') do
-				print(str3)
 				if str3:find('%w+ *= *"[^"]+"') then
-					print(str3)
 					local index, value = str3:match('(%w+) *= *"([^"]+)"')
 					if index and value then
 						value = value:gsub("\\n","\n")
@@ -544,7 +542,6 @@ local function parseBios( _sName, _sDir )
 						tAnnotations.general[index] = value
 					end
 				elseif str3:find('%w+ *= *%w+') then
-					print(str3)
 					local index, value = str3:match('(%w+) *= *(%w+)')
 					if value == "true" then value = true
 					elseif value == "false" then value = false end
@@ -837,7 +834,7 @@ scanBootDir("rom/boot")
 if not fs.exists("boot") then fs.makeDir("boot") end
 
 if not tBiosList[2] and tBiosList[1] then
-	--os.bootMenu(tBiosList[1].uid, true)
+	os.bootMenu(tBiosList[1].uid, true)
 else
 	local fConfig = fs.open("boot/bootConf.cfg","r")
 	if fConfig then
