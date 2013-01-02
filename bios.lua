@@ -834,7 +834,7 @@ scanBootDir("rom/boot")
 if not fs.exists("boot") then fs.makeDir("boot") end
 
 if not tBiosList[2] and tBiosList[1] then
-	os.bootMenu(tBiosList[1].uid, true)
+	os.boot(tBiosList[1].uid, true)
 else
 	local fConfig = fs.open("boot/bootConf.cfg","r")
 	if fConfig then
